@@ -75,7 +75,7 @@ namespace SRTK
         /// Call TypeManagerExt.TypeCheck() to see how many are there now
         /// Must be dividable by 4
         /// </summary>
-        public const int K_MaxTrackedComponentCount = 16;
+        public const int K_MaxTrackedComponentCount = 128;
         unsafe internal fixed byte QuadTracks[K_QuadTrackStateCount];//QuadTrackState
 
         unsafe public ExistState GetTrackState(ComponentExistHandle handle)

@@ -66,7 +66,7 @@ namespace SRTK
         /// Call TypeManagerExt.TypeCheck() to see how many are there now
         /// Must be dividable by 8
         /// </summary>
-        public const int K_MaxTrackedComponentCount = 16;
+        public const int K_MaxTrackedComponentCount = 128;
         public const int K_Enabled = 0;
         public const int K_Disabled = 1;
         unsafe internal fixed byte OctTracks[K_OctTrackStateCount];//DualTrackState
