@@ -160,11 +160,15 @@ namespace SRTK
         }
 
         /// <summary>
-        /// Register a new type that can be tracked, must be called in main thread
+        /// Register a new type that can be disabled, must be called in main thread
         /// </summary>
         public void RegisterTypeForDisable<T>()
         {
-            Assert.IsTrue(mInitialized, "RegisterTypeForTracking must be call in OnCreate and before ComponentDisableInfoSystem's first update!");
+            if (TrackedTypeCount > K_MaxTrackedComponentCount)
+            {
+                Debug.LogError($"Can not Track more than {K_MaxTrackedComponentCount} Tracked types, consider increase ComponentExistTrack.K_MaxTrackedComponentCount");
+                return;
+            }
             Initialize();
             var typeOffset = TypeManagerExt.GetTypeOffset<T>();
             TypeOffset2DisableID[typeOffset] = TrackedTypeCount++;

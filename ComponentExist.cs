@@ -311,11 +311,11 @@ namespace SRTK
         }
 
         /// <summary>
-        /// Register a new type that can be tracked, must be called in main thread
+        /// Register a new type that can be tracked, must be called in main thread within SystemBase.OnCreate()
         /// </summary>
         public void RegisterTypeForTracking<T>()
         {
-            Assert.IsTrue(mInitialized && !mSorted, "RegisterTypeForTracking must be call in OnCreate and before ComponentExistInfoSystem's first update!");
+            Assert.IsTrue(!mSorted, "RegisterTypeForTracking must be call in OnCreate and before ComponentExistInfoSystem's first update!");
             Initialize();
             var typeOffset = TypeManagerExt.GetTypeOffset<T>();
             TypeOffset2TrackIndex[typeOffset] = ShouldTrack;
