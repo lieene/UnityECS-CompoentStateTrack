@@ -167,7 +167,7 @@ namespace SRTK
             Assert.IsTrue(mInitialized, "RegisterTypeForTracking must be call in OnCreate and before ComponentDisableInfoSystem's first update!");
             Initialize();
             var typeOffset = TypeManagerExt.GetTypeOffset<T>();
-            TypeOffset2DisableID[typeOffset] = CanDisable;
+            TypeOffset2DisableID[typeOffset] = TrackedTypeCount++;
         }
 
         public ComponentDisableHandle GetDisableHand<T>()
