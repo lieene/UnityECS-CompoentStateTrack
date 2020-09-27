@@ -1,71 +1,5 @@
 {
   "dependencies": {
-    "com.unity.2d.common": {
-      "version": "3.0.1",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.2d.sprite": "1.0.0",
-        "com.unity.modules.uielements": "1.0.0"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.2d.path": {
-      "version": "3.0.2",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {},
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.2d.sprite": {
-      "version": "1.0.0",
-      "depth": 0,
-      "source": "builtin",
-      "dependencies": {}
-    },
-    "com.unity.2d.spriteshape": {
-      "version": "4.1.3",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.mathematics": "1.1.0",
-        "com.unity.2d.common": "3.0.1",
-        "com.unity.2d.path": "3.0.2",
-        "com.unity.modules.physics2d": "1.0.0"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.2d.tilemap": {
-      "version": "1.0.0",
-      "depth": 0,
-      "source": "builtin",
-      "dependencies": {}
-    },
-    "com.unity.animation": {
-      "version": "0.6.0-preview.2",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.mathematics": "1.1.0",
-        "com.unity.entities": "0.13.0-preview.24",
-        "com.unity.collections": "0.11.0-preview.17",
-        "com.unity.jobs": "0.4.0-preview.18",
-        "com.unity.burst": "1.3.2",
-        "com.unity.test-framework": "1.1.13",
-        "com.unity.dataflowgraph": "0.16.0-preview.2",
-        "com.unity.test-framework.performance": "2.0.8-preview"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.aovrecorder": {
-      "version": "0.1.1-preview.2",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.recorder": "2.1.0-preview.1"
-      },
-      "url": "https://packages.unity.cn"
-    },
     "com.unity.burst": {
       "version": "1.4.0-preview.4",
       "depth": 0,
@@ -91,19 +25,6 @@
       "dependencies": {
         "com.unity.test-framework.performance": "2.3.1-preview",
         "com.unity.burst": "1.3.2"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.dataflowgraph": {
-      "version": "0.16.0-preview.2",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.entities": "0.11.1-preview.4",
-        "com.unity.jobs": "0.2.10-preview.12",
-        "com.unity.collections": "0.9.0-preview.6",
-        "com.unity.mathematics": "1.1.0",
-        "com.unity.burst": "1.3.0"
       },
       "url": "https://packages.unity.cn"
     },
@@ -223,13 +144,6 @@
       },
       "url": "https://packages.unity.cn"
     },
-    "com.unity.postprocessing": {
-      "version": "2.3.0",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {},
-      "url": "https://packages.unity.cn"
-    },
     "com.unity.properties": {
       "version": "1.4.3-preview",
       "depth": 1,
@@ -258,45 +172,6 @@
       "dependencies": {},
       "url": "https://packages.unity.cn"
     },
-    "com.unity.recorder": {
-      "version": "2.1.0-preview.1",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.timeline": "1.0.0"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.render-pipelines.core": {
-      "version": "9.0.0-preview.60",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.ugui": "1.0.0"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.render-pipelines.universal": {
-      "version": "9.0.0-preview.55",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.mathematics": "1.1.0",
-        "com.unity.burst": "1.2.3",
-        "com.unity.render-pipelines.core": "9.0.0-preview.60",
-        "com.unity.shadergraph": "9.0.0-preview.55"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.rendering.hybrid": {
-      "version": "0.8.0-preview.18",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.entities": "0.14.0-preview.18"
-      },
-      "url": "https://packages.unity.cn"
-    },
     "com.unity.scriptablebuildpipeline": {
       "version": "1.9.0",
       "depth": 1,
@@ -305,8 +180,8 @@
       "url": "https://packages.unity.cn"
     },
     "com.unity.searcher": {
-      "version": "4.2.0",
-      "depth": 2,
+      "version": "4.0.9",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.cn"
@@ -321,16 +196,6 @@
         "com.unity.jobs": "0.2.9-preview.15",
         "com.unity.properties": "1.4.3-preview",
         "com.unity.test-framework.performance": "2.0.8-preview"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.shadergraph": {
-      "version": "9.0.0-preview.55",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.render-pipelines.core": "9.0.0-preview.60",
-        "com.unity.searcher": "4.2.0"
       },
       "url": "https://packages.unity.cn"
     },
@@ -352,51 +217,6 @@
       "dependencies": {
         "com.unity.test-framework": "1.1.0",
         "com.unity.nuget.newtonsoft-json": "2.0.0-preview"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.textmeshpro": {
-      "version": "3.0.1",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.ugui": "1.0.0"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.timeline": {
-      "version": "1.4.1",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.modules.director": "1.0.0",
-        "com.unity.modules.animation": "1.0.0",
-        "com.unity.modules.audio": "1.0.0",
-        "com.unity.modules.particlesystem": "1.0.0"
-      },
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.ugui": {
-      "version": "1.0.0",
-      "depth": 0,
-      "source": "builtin",
-      "dependencies": {
-        "com.unity.modules.ui": "1.0.0"
-      }
-    },
-    "com.unity.ui.builder": {
-      "version": "1.0.0-preview.6",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {},
-      "url": "https://packages.unity.cn"
-    },
-    "com.unity.visualeffectgraph": {
-      "version": "9.0.0-preview.54",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.shadergraph": "9.0.0-preview.55"
       },
       "url": "https://packages.unity.cn"
     },
