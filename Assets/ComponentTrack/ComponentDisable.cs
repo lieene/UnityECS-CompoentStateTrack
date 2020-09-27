@@ -36,23 +36,16 @@
 ************************************************************************************/
 
 using System;
-using UnityEngine;
 using Unity.Entities;
 using Unity.Assertions;
-using Unity.Transforms;
-using Unity.Mathematics;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Jobs;
-using Unity.Jobs.LowLevel.Unsafe;
-using SRTK;
-using SRTK.Utility;
-using SRTK.Conscious;
 using System.Text;
+using System.Diagnostics;
 
 namespace SRTK
 {
+    using Debug = UnityEngine.Debug;
     using static ComponentDisable;
     using static ComponentDisableInfoSystem;
 
@@ -174,12 +167,23 @@ namespace SRTK
             TypeOffset2DisableID[typeOffset] = TrackedTypeCount++;
         }
 
-        public ComponentDisableHandle GetDisableHand<T>()
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        public void DisableID_Check(int disableID, int typeIndex)
+        {
+            if (disableID <= CanNotDisable)
+            {
+                var type = TypeManager.GetType(typeIndex);
+                throw new Exception($"Type: {type.Name} [TypeIndex={typeIndex}, DisableID={disableID}] is not Tracked by ComponentDisableInfoSystem");
+            }
+        }
+
+        public ComponentDisableHandle GetDisableHandle<T>()
         {
             Assert.IsTrue(mInitialized, "Call GetTrackHand in OnUpdate of System, after ComponentDisableInfoSystem is initialized");
             var offset = TypeManagerExt.GetTypeOffset<T>();
             Assert.IsTrue(offset >= 0 && offset < TypeOffset2DisableID.Length, "Invalid Type");
             var disableID = TypeOffset2DisableID[offset];
+            DisableID_Check(disableID, TypeManager.GetTypeIndex<T>());
             Assert.IsTrue(disableID > CanNotDisable, "Type is not tracked");
             return new ComponentDisableHandle() { DisableID = disableID };
         }

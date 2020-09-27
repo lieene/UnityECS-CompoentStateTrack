@@ -35,16 +35,16 @@
 | ----------	---	----------------------------------------------------------      |
 ************************************************************************************/
 
-using System;
 using UnityEngine;
 using Unity.Entities;
 using UnityEngine.InputSystem;
 
 namespace SRTK
 {
-    public struct DataA : IComponentData
-    {
-    }
+    public struct DataA : IComponentData { public int Value; }
+    public struct DataB : IBufferElementData { public int Value; }
+    public struct DataC : IComponentData { }
+    
     public class TestDisableAndExist : SystemBase
     {
         ComponentDisableInfoSystem DisableInfo;
@@ -55,9 +55,11 @@ namespace SRTK
         {
             DisableInfo = World.GetOrCreateSystem<ComponentDisableInfoSystem>();
             DisableInfo.RegisterTypeForDisable<DataA>();
+            DisableInfo.RegisterTypeForDisable<DataC>();
 
             ExistInfo = World.GetOrCreateSystem<ComponentExistInfoSystem>();
             ExistInfo.RegisterTypeForTracking<DataA>();
+            ExistInfo.RegisterTypeForTracking<DataB>();
 
             target = EntityManager.CreateEntity();
             EntityManager.AddComponent<ComponentExist>(target);
@@ -67,15 +69,17 @@ namespace SRTK
 
         protected override void OnUpdate()
         {
-            var disableHandle = DisableInfo.GetDisableHand<DataA>();
-            var existHandle = ExistInfo.GetExistHandle<DataA>();
+            var disableHandleA = DisableInfo.GetDisableHandle<DataA>();
+            var disableHandleC = DisableInfo.GetDisableHandle<DataC>();
+            var existHandleA = ExistInfo.GetExistHandle<DataA>();
+            var existHandleB = ExistInfo.GetExistHandle<DataB>();
 
             Entities.WithoutBurst()
             .WithChangeFilter<ComponentDisable>()
             .WithChangeFilter<ComponentExist>()
             .ForEach((Entity e, in ComponentDisable disable, in ComponentExist exist) =>
             {
-                Debug.Log($"Entity[{e}] Has DataA={HasComponent<DataA>(e)} Enabled={disable.GetEnabled(disableHandle)}, Exist={exist.GetTrackState(existHandle)}");
+                Debug.Log($"Entity[{e}] Has DataA={HasComponent<DataA>(e)} Enabled={disable.GetEnabled(disableHandleA)}, Exist={exist.GetTrackState(existHandleA)}");
             }).Schedule();
 
             var keyboard = InputSystem.GetDevice<Keyboard>();
@@ -94,13 +98,13 @@ namespace SRTK
             if (keyboard.digit3Key.wasPressedThisFrame)
             {
                 Entities.ForEach((ref ComponentDisable disable, in ComponentExist exist, in DataA a) =>
-                { disable.SetEnabled(disableHandle, false); }).Schedule();
+                { disable.SetEnabled(disableHandleA, false); }).Schedule();
                 Debug.LogWarning($"Setting DataA Disable");
             }
             if (keyboard.digit4Key.wasPressedThisFrame)
             {
                 Entities.ForEach((ref ComponentDisable disable, in ComponentExist exist, in DataA a) =>
-                { disable.SetEnabled(disableHandle, true); }).Schedule();
+                { disable.SetEnabled(disableHandleA, true); }).Schedule();
                 Debug.LogWarning($"Setting DataA Enable");
             }
 

@@ -36,20 +36,19 @@
 ************************************************************************************/
 
 using System;
-using UnityEngine;
 using Unity.Entities;
 using Unity.Assertions;
-using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using Unity.Jobs.LowLevel.Unsafe;
 using System.Text;
+using System.Diagnostics;
 
 namespace SRTK
 {
+    using Debug = UnityEngine.Debug;
     using static ComponentExist;
     using static ComponentExistInfoSystem;
     public enum ExistState : byte
@@ -321,13 +320,22 @@ namespace SRTK
             TypeOffset2TrackIndex[typeOffset] = ShouldTrack;
         }
 
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        public void TrackID_Check(int trackID, int typeIndex)
+        {
+            if (trackID <= UnTracked)
+            {
+                var type = TypeManager.GetType(typeIndex);
+                throw new Exception($"Type: {type.Name} [TypeIndex={typeIndex}, TrackID={trackID}] is not Tracked by ComponentExistInfoSystem");
+            }
+        }
         public ComponentExistHandle GetExistHandle<T>()
         {
             Assert.IsTrue(mSorted, "Call GetTrackHand in OnUpdate of System, after ComponentExistInfoSystem is Sorted");
             var offset = TypeManagerExt.GetTypeOffset<T>();
             Assert.IsTrue(offset >= 0 && offset < TypeOffset2TrackIndex.Length, "Invalid Type");
             var trackID = TypeOffset2TrackIndex[offset];
-            Assert.IsTrue(trackID > UnTracked, "Type is not tracked");
+            TrackID_Check(trackID, TypeManager.GetTypeIndex<T>());
             return new ComponentExistHandle() { trackID = trackID };
         }
 
