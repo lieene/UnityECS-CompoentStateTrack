@@ -59,7 +59,11 @@ namespace SRTK
         RemovedLastSync     /**/= 0b01,
     }
 
-    public struct ComponentExistHandle { internal int trackID; }
+    public struct ComponentExistHandle
+    {
+        internal int TrackID;
+        public override string ToString() => $"TrackID={TrackID.ToString()}";
+    }
 
     [GenerateAuthoringComponent]
     public struct ComponentExist : IComponentData
@@ -71,8 +75,8 @@ namespace SRTK
         /// Call TypeManagerExt.TypeCheck() to see how many are there now
         /// Must be dividable by 4
         /// </summary>
-        public const int K_MaxTrackedComponentCount = 128;
-        unsafe internal fixed byte QuadTracks[K_DualTrackStateCount];//DualTrackState
+        public const int K_MaxTrackedComponentCount = 16;
+        unsafe internal fixed byte QuadTracks[K_QuadTrackStateCount];//QuadTrackState
 
         unsafe public ExistState GetTrackState(ComponentExistHandle handle)
         {
@@ -85,20 +89,21 @@ namespace SRTK
         public bool WasExist(ComponentExistHandle handle) => GetTrackState(handle) == ExistState.ExistedLastSync;
 
 
-        const int K_DualTrackStateCount = K_MaxTrackedComponentCount >> K_TrackID2QuadIDShift;
-        internal const int K_QuadOffsetMask = 0x0004;
+        internal const int K_QuadTrackStateCount = K_MaxTrackedComponentCount >> K_TrackID2QuadIDShift;
+        internal const int K_QuadOffsetMask = 0b0011;
         internal const int K_KeepLowestMask = 0b0011;
         internal const int K_TrackID2QuadIDShift = 2;
 
         unsafe internal ref QuadState GetQuadState(int trackID, out int bitShift)
         {
             Assert.IsTrue(trackID >= 0 && trackID < K_MaxTrackedComponentCount, "Invalid Track ID");
-            bitShift = (trackID & K_QuadOffsetMask);
+            bitShift = (trackID & K_QuadOffsetMask) << 1;
             var quadID = trackID >> K_TrackID2QuadIDShift;
+            // Debug.Log($"[GetQuadState] ExistID={trackID}, Shift={bitShift}, quadID={quadID}");
             fixed (byte* pQuads = QuadTracks) return ref *(QuadState*)(pQuads + quadID);
         }
 
-        internal QuadState GetQuadState(ComponentExistHandle handle, out int bitShift) => GetQuadState(handle.trackID, out bitShift);
+        internal QuadState GetQuadState(ComponentExistHandle handle, out int bitShift) => GetQuadState(handle.TrackID, out bitShift);
 
         internal enum QuadState : byte
         {
@@ -121,10 +126,11 @@ namespace SRTK
             var sb = new StringBuilder();
             unsafe
             {
-                for (int i = 0; i < K_DualTrackStateCount; i++)
+                for (int i = 0; i < K_QuadTrackStateCount; i++)
                 {
                     sb.Append($"[{i}]=");
-                    sb.Append(((QuadState)QuadTracks[i]).ToString());
+                    sb.Append(QuadTracks[i].ToString("X2"));
+                    //sb.Append(Convert.ToInt32(Convert.ToString(QuadTracks[i], 2)).ToString("D8"));
                     sb.Append('.');
                 }
             }
@@ -172,42 +178,42 @@ namespace SRTK
                 var chunkCount = chunk.Count;
                 var chunkTypeIds = (int*)chunk.Archetype.Archetype->Types;
                 var chunkTypeCount = chunk.Archetype.Archetype->TypesCount;
-                int* chunkTrackIds = stackalloc int[chunkTypeCount + 4];//+3 give it enough space for align fill,even if all component type of chunk is tracked
-                int chunkTrackedTypeCount = 0;
+                var alignedCount = (Info.RegisteredCount + 3) & -4;//align count to 4
+
+                int* chunkTypeMatch = stackalloc int[alignedCount + 1];//one extra space for untracked fill
+                UnsafeUtility.MemClear(chunkTypeMatch, alignedCount * sizeof(int));//set all 0 fro match
                 var pChunkTracks = (ComponentExist*)NativeArrayUnsafeUtility.GetUnsafePtr(chunkStates);
                 var map = Info.TypeOffset2TrackIndex;
 
+                bool hasMatch = false;
                 //find all tracked types
                 for (int i = 0; i < chunkTypeCount; i++)
                 {
                     var trackId = map[chunkTypeIds[i] & TypeManager.ClearFlagsMask];
-                    chunkTrackIds[chunkTrackedTypeCount] = trackId;
-                    chunkTrackedTypeCount += trackId <= UnTracked ? 0 : 1;
+                    var match = trackId > UnTracked;
+                    hasMatch = hasMatch | match;
+                    chunkTypeMatch[math.select(alignedCount, trackId, match)] = 1;//set 1 for match
                 }
 
-                //align fill so int4 from any int* in chunkTrackedTypeCount range will have meaningful value
-                for (int i = chunkTrackedTypeCount & TypeManager.ClearFlagsMask, j = chunkTrackedTypeCount; i < 4; i++, j++) { chunkTrackIds[j] = UnTracked; }
-
-                //TODO: May not need to sort
-                //TypeOffset2TrackIndex is Order
-                //If Types in ArchetypeChunk is Order, then we don't need to sort this
-                NativeSortExtension.Sort(chunkTrackIds, chunkTrackedTypeCount);
-                var registeredCount = Info.RegisteredCount;
-                if (chunkTrackIds[0] == ComponentExistInfoSystem.UnTracked)
+                if (!hasMatch)
                 {
                     //No tracked component on this chunk, update as none-exist
                     for (int i = 0; i < chunkCount; i++)
                     {
                         var track = pChunkTracks + i;
-                        for (int trackID = 0; trackID < registeredCount; trackID += 4)
+                        for (int trackID = 0; trackID < alignedCount; trackID += 4)
                         {
                             var quadID = trackID >> K_TrackID2QuadIDShift;
                             ref var quadState = ref *(track->QuadTracks + quadID);
-                            var intTrack = (int)quadState;
+                            var intState = (int)quadState;
                             //var quad = intTrack >> math.int4(0, 2, 4, 6); //not implemented
-                            var int4State = math.int4(intTrack, intTrack >> 2, intTrack >> 4, intTrack >> 6);
-                            int4State = int4State & K_KeepLowestMask;
+                            var int4State = math.int4(intState, intState >> 2, intState >> 4, intState >> 6);
+                            int4State &= K_KeepLowestMask;
                             var wasExist4 = int4State >= (int)ExistState.ExistedLastSync;
+
+                            // if (math.any(wasExist4 != math.bool4(false)))
+                            //     Debug.Log($"No Match TID[{trackID}], QID[{quadID}], WasExist={wasExist4}, isExist={math.bool4(false)}, PrevState:{int4State}");
+
                             int4State = math.select(math.int4((int)ExistState.None), math.int4((int)ExistState.RemovedLastSync), wasExist4);
                             quadState = (byte)(int4State.x | int4State.y << 2 | int4State.z << 4 | int4State.w << 6);
                         }
@@ -219,28 +225,23 @@ namespace SRTK
                 for (int i = 0; i < chunkCount; i++)
                 {
                     var track = pChunkTracks + i;
-                    var chunkTrackIDOffset = 0;
-                    for (int trackID = 0; trackID < registeredCount; trackID += 4)
+                    for (int trackID = 0; trackID < alignedCount; trackID += 4)
                     {
                         var quadID = trackID >> K_TrackID2QuadIDShift;
                         ref var quadState = ref *(track->QuadTracks + quadID);
                         var intTrack = (int)quadState;
                         //var quad = intTrack >> math.int4(0, 2, 4, 6); //not implemented
                         var int4State = math.int4(intTrack, intTrack >> 2, intTrack >> 4, intTrack >> 6);
-                        int4State = int4State & K_KeepLowestMask;
-
-                        var chunkTrackId4 = *(int4*)(chunkTrackIds + chunkTrackIDOffset);
-                        var exist4 = (chunkTrackId4 >> K_TrackID2QuadIDShift) == quadID;
+                        int4State &= K_KeepLowestMask;
                         var wasExist4 = int4State >= (int)ExistState.ExistedLastSync;
+                        var exist4 = (*(int4*)(chunkTypeMatch + trackID)) > 0;
+                        // if (math.any(wasExist4 != exist4))
+                        //     Debug.Log($"TID[{trackID}], QID[{quadID}], WasExist={wasExist4}, isExist={exist4}, PrevState:{int4State}, curState:{(*(int4*)(chunkTypeMatch + trackID))} alignedCount{alignedCount}");
 
                         //update state
                         int4State = math.select(
                             math.select(math.int4((int)ExistState.None), math.int4((int)ExistState.RemovedLastSync), wasExist4),
                             math.select(math.int4((int)ExistState.AddedLastSync), math.int4((int)ExistState.ExistedLastSync), wasExist4), exist4);
-
-                        //step chunk TrackID Offset
-                        var offset4 = math.select(math.int4(0), math.int4(1), exist4);
-                        chunkTrackIDOffset += math.csum(offset4);
 
                         quadState = (byte)(int4State.x | int4State.y << 2 | int4State.z << 4 | int4State.w << 6);
                     }
@@ -336,7 +337,7 @@ namespace SRTK
             Assert.IsTrue(offset >= 0 && offset < TypeOffset2TrackIndex.Length, "Invalid Type");
             var trackID = TypeOffset2TrackIndex[offset];
             TrackID_Check(trackID, TypeManager.GetTypeIndex<T>());
-            return new ComponentExistHandle() { trackID = trackID };
+            return new ComponentExistHandle() { TrackID = trackID };
         }
 
         protected override void OnCreate() { Initialize(); }

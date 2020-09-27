@@ -42,6 +42,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using System.Text;
 using System.Diagnostics;
+using Unity.Burst;
 
 namespace SRTK
 {
@@ -49,7 +50,11 @@ namespace SRTK
     using static ComponentDisable;
     using static ComponentDisableInfoSystem;
 
-    public struct ComponentDisableHandle { internal int DisableID; }
+    public struct ComponentDisableHandle
+    {
+        internal int DisableID;
+        public override string ToString() => $"DisableID={DisableID.ToString()}";
+    }
 
     [GenerateAuthoringComponent]
     public struct ComponentDisable : IComponentData
@@ -61,36 +66,37 @@ namespace SRTK
         /// Call TypeManagerExt.TypeCheck() to see how many are there now
         /// Must be dividable by 8
         /// </summary>
-        public const int K_MaxTrackedComponentCount = 128;
+        public const int K_MaxTrackedComponentCount = 16;
         public const int K_Enabled = 0;
         public const int K_Disabled = 1;
         unsafe internal fixed byte OctTracks[K_OctTrackStateCount];//DualTrackState
 
         unsafe public bool GetEnabled(ComponentDisableHandle handle)
         {
-            var quadState = GetOctState(handle, out var bitShift);
-            return (K_KeepLowestMask & (((byte)quadState) >> bitShift)) == K_Enabled;
+            var octState = GetOctState(handle, out var bitShift);
+            return (K_KeepLowestMask & (((byte)octState) >> bitShift)) == K_Enabled;
         }
 
         unsafe public void SetEnabled(ComponentDisableHandle handle, bool value)
         {
-            ref var quadState = ref GetOctState(handle.DisableID, out var bitShift);
+            ref var octState = ref GetOctState(handle.DisableID, out var bitShift);
             var enable = 1 << bitShift;
-            var trueCase = (byte)(quadState & ~enable);
-            var falseCase = (byte)(quadState | enable);
-            quadState = value ? trueCase : falseCase;
+            var trueCase = (byte)(octState & ~enable);
+            var falseCase = (byte)(octState | enable);
+            octState = value ? trueCase : falseCase;
         }
-        const int K_OctTrackStateCount = K_MaxTrackedComponentCount >> K_DisableID2QuadIDShift;
-        internal const int K_QuadOffsetMask = 0x0008;
+        const int K_OctTrackStateCount = K_MaxTrackedComponentCount >> K_DisableID2OctIDShift;
+        internal const int K_QctOffsetMask = 0b0111;
         internal const int K_KeepLowestMask = 0b0001;
-        internal const int K_DisableID2QuadIDShift = 3;
+        internal const int K_DisableID2OctIDShift = 3;
 
         unsafe internal ref byte GetOctState(int disableID, out int bitShift)
         {
             Assert.IsTrue(disableID >= 0 && disableID < K_MaxTrackedComponentCount, "Invalid Track ID");
-            bitShift = (disableID & K_QuadOffsetMask);
-            var quadID = disableID >> K_DisableID2QuadIDShift;
-            fixed (byte* pQuads = OctTracks) return ref *(pQuads + quadID);
+            bitShift = (disableID & K_QctOffsetMask);
+            var octID = disableID >> K_DisableID2OctIDShift;
+            // Debug.Log($"[GetOctState] DisableID={disableID}, Shift={bitShift}, octID={octID}");
+            fixed (byte* pOct = OctTracks) return ref *(pOct + octID);
         }
 
         internal byte GetOctState(ComponentDisableHandle handle, out int bitShift) => GetOctState(handle.DisableID, out bitShift);
@@ -103,7 +109,8 @@ namespace SRTK
                 for (int i = 0; i < K_OctTrackStateCount; i++)
                 {
                     sb.Append($"[{i}]=");
-                    sb.Append((OctTracks[i]).ToString());
+                    sb.Append(OctTracks[i].ToString("X2"));
+                    //sb.Append(Convert.ToInt32(Convert.ToString(OctTracks[i], 2)).ToString("D8"));
                     sb.Append('.');
                 }
             }
@@ -114,7 +121,6 @@ namespace SRTK
     [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true)]
     public class ComponentDisableInfoSystem : SystemBase
     {
-        internal const int CanDisable = 1;
         internal const int CanNotDisable = -1;
         internal NativeArray<int> TypeOffset2DisableID;
         private bool mInitialized = false;
@@ -159,11 +165,12 @@ namespace SRTK
         {
             if (TrackedTypeCount > K_MaxTrackedComponentCount)
             {
-                Debug.LogError($"Can not Track more than {K_MaxTrackedComponentCount} Tracked types, consider increase ComponentExistTrack.K_MaxTrackedComponentCount");
+                Debug.LogError($"Can not Track more than {K_MaxTrackedComponentCount} Disable types, consider increase ComponentDisable.K_MaxTrackedComponentCount");
                 return;
             }
             Initialize();
             var typeOffset = TypeManagerExt.GetTypeOffset<T>();
+            if (TypeOffset2DisableID[typeOffset] > CanNotDisable) return;
             TypeOffset2DisableID[typeOffset] = TrackedTypeCount++;
         }
 
@@ -184,7 +191,6 @@ namespace SRTK
             Assert.IsTrue(offset >= 0 && offset < TypeOffset2DisableID.Length, "Invalid Type");
             var disableID = TypeOffset2DisableID[offset];
             DisableID_Check(disableID, TypeManager.GetTypeIndex<T>());
-            Assert.IsTrue(disableID > CanNotDisable, "Type is not tracked");
             return new ComponentDisableHandle() { DisableID = disableID };
         }
 

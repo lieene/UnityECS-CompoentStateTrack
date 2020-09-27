@@ -38,13 +38,23 @@
 using UnityEngine;
 using Unity.Entities;
 using UnityEngine.InputSystem;
+using Unity.Collections;
 
 namespace SRTK
 {
     public struct DataA : IComponentData { public int Value; }
+    public struct D0 : IComponentData { }
+    public struct D1 : IComponentData { }
+    public struct D2 : IComponentData { }
+    public struct D3 : IComponentData { }
+    public struct D4 : IComponentData { }
+    public struct D5 : IComponentData { }
+    public struct D6 : IComponentData { }
+    public struct D7 : IComponentData { }
+    public struct D8 : IComponentData { }
     public struct DataB : IBufferElementData { public int Value; }
     public struct DataC : IComponentData { }
-    
+
     public class TestDisableAndExist : SystemBase
     {
         ComponentDisableInfoSystem DisableInfo;
@@ -55,17 +65,37 @@ namespace SRTK
         {
             DisableInfo = World.GetOrCreateSystem<ComponentDisableInfoSystem>();
             DisableInfo.RegisterTypeForDisable<DataA>();
+            DisableInfo.RegisterTypeForDisable<D0>();
+            DisableInfo.RegisterTypeForDisable<D1>();
+            DisableInfo.RegisterTypeForDisable<D2>();
+            DisableInfo.RegisterTypeForDisable<D3>();
+            DisableInfo.RegisterTypeForDisable<D4>();
+            DisableInfo.RegisterTypeForDisable<D5>();
+            DisableInfo.RegisterTypeForDisable<D6>();
+            DisableInfo.RegisterTypeForDisable<D7>();
             DisableInfo.RegisterTypeForDisable<DataC>();
 
             ExistInfo = World.GetOrCreateSystem<ComponentExistInfoSystem>();
             ExistInfo.RegisterTypeForTracking<DataA>();
+            ExistInfo.RegisterTypeForTracking<D0>();
+            ExistInfo.RegisterTypeForTracking<D1>();
+            ExistInfo.RegisterTypeForTracking<D2>();
+            ExistInfo.RegisterTypeForTracking<D3>();
+            ExistInfo.RegisterTypeForTracking<D4>();
+            ExistInfo.RegisterTypeForTracking<D5>();
+            ExistInfo.RegisterTypeForTracking<D6>();
+            ExistInfo.RegisterTypeForTracking<D7>();
+            ExistInfo.RegisterTypeForTracking<D8>();
             ExistInfo.RegisterTypeForTracking<DataB>();
 
             target = EntityManager.CreateEntity();
             EntityManager.AddComponent<ComponentExist>(target);
             EntityManager.AddComponent<ComponentDisable>(target);
             ECBS = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+
+            DisableACRecord = new NativeArray<bool>(2, Allocator.Persistent); ;
         }
+        NativeArray<bool> DisableACRecord;
 
         protected override void OnUpdate()
         {
@@ -73,45 +103,92 @@ namespace SRTK
             var disableHandleC = DisableInfo.GetDisableHandle<DataC>();
             var existHandleA = ExistInfo.GetExistHandle<DataA>();
             var existHandleB = ExistInfo.GetExistHandle<DataB>();
+            var keyboard = InputSystem.GetDevice<Keyboard>();
+            if (keyboard.spaceKey.wasPressedThisFrame)
+            {
+                Debug.Log("Disable" + EntityManager.GetComponentData<ComponentDisable>(target).ToString() + "\nExist" + EntityManager.GetComponentData<ComponentExist>(target).ToString());
+            }
+            if (keyboard.pKey.wasPressedThisFrame)
+            {
+                Debug.Log($"A: {disableHandleA}|{existHandleA}, C: {disableHandleC}, B: {existHandleB}");
+            }
 
+            var recordCache = DisableACRecord;
+            var BAccess = GetBufferFromEntity<DataB>();
             Entities.WithoutBurst()
-            .WithChangeFilter<ComponentDisable>()
-            .WithChangeFilter<ComponentExist>()
             .ForEach((Entity e, in ComponentDisable disable, in ComponentExist exist) =>
             {
-                Debug.Log($"Entity[{e}] Has DataA={HasComponent<DataA>(e)} Enabled={disable.GetEnabled(disableHandleA)}, Exist={exist.GetTrackState(existHandleA)}");
+                bool enabledA = disable.GetEnabled(disableHandleA);
+                bool enabledC = disable.GetEnabled(disableHandleC);
+                var stateA = exist.GetTrackState(existHandleA);
+                var stateB = exist.GetTrackState(existHandleB);
+                if (recordCache[0] != enabledA || recordCache[1] != enabledC ||
+                    stateA == ExistState.AddedLastSync || stateA == ExistState.RemovedLastSync ||
+                    stateB == ExistState.AddedLastSync || stateB == ExistState.RemovedLastSync)
+                {
+                    Debug.Log(
+                        $"Entity[{e}] HasA={HasComponent<DataA>(e)} HasB={BAccess.HasComponent(e)} HasC={HasComponent<DataC>(e)}\n" +
+                        $"  EnabledA={enabledA}, EnabledC={enabledC}\n" +
+                        $"  ExistA={stateA} ExistB={stateB}");
+                }
+                recordCache[0] = enabledA;
+                recordCache[1] = enabledC;
             }).Schedule();
 
-            var keyboard = InputSystem.GetDevice<Keyboard>();
             var ECB = ECBS.CreateCommandBuffer();
-            if (keyboard.digit1Key.wasPressedThisFrame)
+            if (keyboard.qKey.wasPressedThisFrame)
             {
                 ECB.AddComponent<DataA>(target);
                 Debug.LogWarning($"Add DataA to {target}");
             }
-            if (keyboard.digit2Key.wasPressedThisFrame)
+            if (keyboard.aKey.wasPressedThisFrame)
             {
                 ECB.RemoveComponent<DataA>(target);
                 Debug.LogWarning($"Remove DataA From {target}");
+            }
 
-            }
-            if (keyboard.digit3Key.wasPressedThisFrame)
+            if (keyboard.wKey.wasPressedThisFrame)
             {
-                Entities.ForEach((ref ComponentDisable disable, in ComponentExist exist, in DataA a) =>
-                { disable.SetEnabled(disableHandleA, false); }).Schedule();
-                Debug.LogWarning($"Setting DataA Disable");
+                ECB.AddBuffer<DataB>(target);
+                Debug.LogWarning($"Add DataB to {target}");
             }
-            if (keyboard.digit4Key.wasPressedThisFrame)
+            if (keyboard.sKey.wasPressedThisFrame)
             {
-                Entities.ForEach((ref ComponentDisable disable, in ComponentExist exist, in DataA a) =>
-                { disable.SetEnabled(disableHandleA, true); }).Schedule();
-                Debug.LogWarning($"Setting DataA Enable");
+                ECB.RemoveComponent<DataB>(target);
+                Debug.LogWarning($"Remove DataB From {target}");
             }
+
+            if (keyboard.eKey.wasPressedThisFrame)
+            {
+                ECB.AddComponent<DataC>(target);
+                Debug.LogWarning($"Add DataC to {target}");
+            }
+            if (keyboard.dKey.wasPressedThisFrame)
+            {
+                ECB.RemoveComponent<DataC>(target);
+                Debug.LogWarning($"Remove DataC From {target}");
+            }
+
+
+            if (keyboard.digit1Key.wasPressedThisFrame)
+            {
+                Entities.ForEach((ref ComponentDisable disable) => { disable.SetEnabled(disableHandleA, !disable.GetEnabled(disableHandleA)); }).Schedule();
+                Debug.LogWarning($"Toggle DataA Disable");
+            }
+            if (keyboard.digit2Key.wasPressedThisFrame)
+            {
+                Entities.ForEach((ref ComponentDisable disable) => { disable.SetEnabled(disableHandleC, !disable.GetEnabled(disableHandleC)); }).Schedule();
+                Debug.LogWarning($"Toggle DataC Disable");
+            }
+
 
 
             ECBS.AddJobHandleForProducer(Dependency);
         }
 
-        protected override void OnDestroy() { }
+        protected override void OnDestroy()
+        {
+            DisableACRecord.Dispose();
+        }
     }
 }
