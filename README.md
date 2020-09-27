@@ -17,7 +17,7 @@ protected override void OnCreate()
 }
 protected override void OnUpdate()
 {
-    var disableHandle = DisableInfo.GetDisableHand<DataA>();
+    var disableHandle = DisableInfo.GetDisableHandle<DataA>();
     var existHandle = ExistInfo.GetExistHandle<DataA>();
 
     Entities.WithoutBurst() // WithoutBurst Only for Debug.Log
