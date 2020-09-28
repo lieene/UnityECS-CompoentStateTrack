@@ -4,7 +4,7 @@
 | Created Date: Sun Sep 27 2020                                                     |
 | Author: Lieene Guo                                                                |
 | -----                                                                             |
-| Last Modified: Sun Sep 27 2020                                                    |
+| Last Modified: Mon Sep 28 2020                                                    |
 | Modified By: Lieene Guo                                                           |
 | -----                                                                             |
 | MIT License                                                                       |
@@ -38,7 +38,6 @@
 using UnityEngine;
 using Unity.Entities;
 using UnityEngine.InputSystem;
-using Unity.Collections;
 
 namespace SRTK
 {
@@ -55,6 +54,47 @@ namespace SRTK
     public struct DataB : IBufferElementData { public int Value; }
     public struct DataC : IComponentData { }
 
+    public class TestDisableAndExistLog : SystemBase
+    {
+        ComponentDisableInfoSystem DisableInfo;
+        ComponentExistInfoSystem ExistInfo;
+        protected override void OnCreate()
+        {
+            base.OnCreate();
+            DisableInfo = World.GetOrCreateSystem<ComponentDisableInfoSystem>();
+            ExistInfo = World.GetOrCreateSystem<ComponentExistInfoSystem>();
+        }
+
+        protected override void OnUpdate()
+        {
+            var disableHandleA = DisableInfo.GetDisableHandle<DataA>();
+            var disableHandleC = DisableInfo.GetDisableHandle<DataC>();
+            var existHandleA = ExistInfo.GetExistHandle<DataA>();
+            var existHandleB = ExistInfo.GetExistHandle<DataB>();
+            var BAccess = GetBufferFromEntity<DataB>();
+            Entities.WithoutBurst()
+            .WithChangeFilter<ComponentDisable>()
+            .WithChangeFilter<ComponentExist>()
+            .ForEach((Entity e, in ComponentDisable disable, in ComponentExist exist) =>
+            {
+                bool enabledA = disable.GetEnabled(disableHandleA);
+                bool enabledC = disable.GetEnabled(disableHandleC);
+                var stateA = exist.GetTrackState(existHandleA);
+                var stateB = exist.GetTrackState(existHandleB);
+                // if (recordCache[0] != enabledA || recordCache[1] != enabledC ||
+                //     stateA == ExistState.AddedLastSync || stateA == ExistState.RemovedLastSync ||
+                //     stateB == ExistState.AddedLastSync || stateB == ExistState.RemovedLastSync)
+                // {
+                Debug.Log(
+                    $"Entity[{e}] HasA={HasComponent<DataA>(e)} HasB={BAccess.HasComponent(e)} HasC={HasComponent<DataC>(e)}\n" +
+                    $"  EnabledA={enabledA}, EnabledC={enabledC}\n" +
+                    $"  ExistA={stateA} ExistB={stateB}");
+                //}
+                // recordCache[0] = enabledA;
+                // recordCache[1] = enabledC;
+            }).Schedule();
+        }
+    }
     public class TestDisableAndExist : SystemBase
     {
         ComponentDisableInfoSystem DisableInfo;
@@ -92,10 +132,7 @@ namespace SRTK
             EntityManager.AddComponent<ComponentExist>(target);
             EntityManager.AddComponent<ComponentDisable>(target);
             ECBS = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
-
-            DisableACRecord = new NativeArray<bool>(2, Allocator.Persistent); ;
         }
-        NativeArray<bool> DisableACRecord;
 
         protected override void OnUpdate()
         {
@@ -113,27 +150,7 @@ namespace SRTK
                 Debug.Log($"A: {disableHandleA}|{existHandleA}, C: {disableHandleC}, B: {existHandleB}");
             }
 
-            var recordCache = DisableACRecord;
             var BAccess = GetBufferFromEntity<DataB>();
-            Entities.WithoutBurst()
-            .ForEach((Entity e, in ComponentDisable disable, in ComponentExist exist) =>
-            {
-                bool enabledA = disable.GetEnabled(disableHandleA);
-                bool enabledC = disable.GetEnabled(disableHandleC);
-                var stateA = exist.GetTrackState(existHandleA);
-                var stateB = exist.GetTrackState(existHandleB);
-                if (recordCache[0] != enabledA || recordCache[1] != enabledC ||
-                    stateA == ExistState.AddedLastSync || stateA == ExistState.RemovedLastSync ||
-                    stateB == ExistState.AddedLastSync || stateB == ExistState.RemovedLastSync)
-                {
-                    Debug.Log(
-                        $"Entity[{e}] HasA={HasComponent<DataA>(e)} HasB={BAccess.HasComponent(e)} HasC={HasComponent<DataC>(e)}\n" +
-                        $"  EnabledA={enabledA}, EnabledC={enabledC}\n" +
-                        $"  ExistA={stateA} ExistB={stateB}");
-                }
-                recordCache[0] = enabledA;
-                recordCache[1] = enabledC;
-            }).Schedule();
 
             var ECB = ECBS.CreateCommandBuffer();
             if (keyboard.qKey.wasPressedThisFrame)
@@ -181,14 +198,9 @@ namespace SRTK
                 Debug.LogWarning($"Toggle DataC Disable");
             }
 
-
-
             ECBS.AddJobHandleForProducer(Dependency);
         }
 
-        protected override void OnDestroy()
-        {
-            DisableACRecord.Dispose();
-        }
+        protected override void OnDestroy() { }
     }
 }

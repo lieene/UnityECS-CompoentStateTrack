@@ -4,7 +4,7 @@
 | Created Date: Sat Sep 26 2020                                                     |
 | Author: Lieene Guo                                                                |
 | -----                                                                             |
-| Last Modified: Sun Sep 27 2020                                                    |
+| Last Modified: Mon Sep 28 2020                                                    |
 | Modified By: Lieene Guo                                                           |
 | -----                                                                             |
 | MIT License                                                                       |
@@ -174,7 +174,10 @@ namespace SRTK
             [ReadOnly] public TrackedTypeInfo Info;
             public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
             {
-                var chunkStates = chunk.GetNativeArray(StateType);
+                var stateTypeRo = StateType;
+                bool* ro = &stateTypeRo.m_IsReadOnly;
+                *ro = true;
+                var chunkStates = chunk.GetNativeArray(stateTypeRo);//delay version change
                 var chunkCount = chunk.Count;
                 var chunkTypeIds = (int*)chunk.Archetype.Archetype->Types;
                 var chunkTypeCount = chunk.Archetype.Archetype->TypesCount;
@@ -195,6 +198,8 @@ namespace SRTK
                     chunkTypeMatch[math.select(alignedCount, trackId, match)] = 1;//set 1 for match
                 }
 
+                bool anyExistChange = false;
+                
                 if (!hasMatch)
                 {
                     //No tracked component on this chunk, update as none-exist
@@ -210,6 +215,7 @@ namespace SRTK
                             var int4State = math.int4(intState, intState >> 2, intState >> 4, intState >> 6);
                             int4State &= K_KeepLowestMask;
                             var wasExist4 = int4State >= (int)ExistState.ExistedLastSync;
+                            anyExistChange |= math.any(wasExist4);
 
                             // if (math.any(wasExist4 != math.bool4(false)))
                             //     Debug.Log($"No Match TID[{trackID}], QID[{quadID}], WasExist={wasExist4}, isExist={math.bool4(false)}, PrevState:{int4State}");
@@ -238,6 +244,7 @@ namespace SRTK
                         // if (math.any(wasExist4 != exist4))
                         //     Debug.Log($"TID[{trackID}], QID[{quadID}], WasExist={wasExist4}, isExist={exist4}, PrevState:{int4State}, curState:{(*(int4*)(chunkTypeMatch + trackID))} alignedCount{alignedCount}");
 
+                        anyExistChange |= math.any(wasExist4 != exist4);
                         //update state
                         int4State = math.select(
                             math.select(math.int4((int)ExistState.None), math.int4((int)ExistState.RemovedLastSync), wasExist4),
@@ -246,6 +253,7 @@ namespace SRTK
                         quadState = (byte)(int4State.x | int4State.y << 2 | int4State.z << 4 | int4State.w << 6);
                     }
                 }
+                if (anyExistChange) chunk.GetNativeArray(StateType);//confirm version change
             }
         }
     }
