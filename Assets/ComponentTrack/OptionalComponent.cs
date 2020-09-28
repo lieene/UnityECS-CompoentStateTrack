@@ -101,24 +101,24 @@ namespace SRTK
             return dataOut;
         }
 
-        public static NativeArray<T> GetOptionalNativeArray<T>(this ref ArchetypeChunk chunk, ComponentTypeHandle<T> typeHandle, int firstEntityIndex)
+        public static NativeArray<T> GetOptionalNativeArray<T>(this ref ArchetypeChunk chunk, ComponentTypeHandle<T> typeHandle)
             where T : unmanaged, IComponentData
         {
             if (chunk.Has(typeHandle)) return chunk.GetNativeArray<T>(typeHandle);
             else return new NativeArray<T>(chunk.Count, Allocator.Temp, NativeArrayOptions.ClearMemory);
         }
 
-        public static NativeArray<T> GetOptionalNativeArray<T>(this ref ArchetypeChunk chunk, ComponentTypeHandle<T> typeHandle, int firstEntityIndex, T defaultValue)
+        public static NativeArray<T> GetOptionalNativeArray<T>(this ref ArchetypeChunk chunk, ComponentTypeHandle<T> typeHandle, T defaultValue)
             where T : unmanaged, IComponentData
         {
             if (chunk.Has(typeHandle)) return chunk.GetNativeArray<T>(typeHandle);
             else
             {
                 var count = chunk.Count;
-                var array = new NativeArray<T>(count, Allocator.Temp, NativeArrayOptions.ClearMemory);
+                var array = new NativeArray<T>(count, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
                 unsafe
                 {
-                    var pDst = ((T*)array.GetUnsafePtr()) + firstEntityIndex;
+                    var pDst = (T*)array.GetUnsafePtr();
                     UnsafeUtility.MemCpyReplicate(pDst, &defaultValue, sizeof(T), count);
                 }
                 return array;

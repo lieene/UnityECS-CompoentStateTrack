@@ -44,7 +44,7 @@ public static NativeArray<T> ToOptionalDataArrayAsync<T>(this ref EntityQuery qu
 In IJobChunk, the following function will return a NativeArray of size: Chunk.Count. if the chunk dose not have T then the array will be filled with defaultValue;
 
 ``` csharp
-public static NativeArray<T> GetOptionalNativeArray<T>(this ref ArchetypeChunk chunk, ComponentTypeHandle<T> typeHandle, int firstEntityIndex, T defaultValue);
+public static NativeArray<T> GetOptionalNativeArray<T>(this ref ArchetypeChunk chunk, ComponentTypeHandle<T> typeHandle, T defaultValue);
 ```
 
 ## Cheers! Bug report is expected.
