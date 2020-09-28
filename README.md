@@ -3,7 +3,7 @@
 1. Pre Component Remove/Add (2bit flags) Tracking with one Tracking System
 2. Pre Component Enable/Disable (1bit flag) capability.
 
-They works like this:
+## How It Works
 
 ``` csharp
 public struct DataA : IComponentData{}// Buffer/Component/SCD/Object are all supported
@@ -30,4 +30,21 @@ protected override void OnUpdate()
 }
 ```
 
-Bug report is expected
+## Added OptionalComponent API
+
+This it to solve the case when optional data create to many branch in Job or Duplicate Entities.ForEach
+Data can be collected ahead, and with default value backup. So ForEach/IJobChunk can run the same routain that allway has this optional Data T.
+
+In OnUpdate of ComponentSystem, the following function will collect ComponentData of Type T, and store them in the returned Array. If T is not found in some of the Entity, defaultValue will be filled;
+
+``` csharp
+public static NativeArray<T> ToOptionalDataArrayAsync<T>(this ref EntityQuery query, SystemBase system, Allocator allocator, ref JobHandle dependency, T defaultValue = default)
+```
+
+In IJobChunk, the following function will return a NativeArray of size: Chunk.Count. if the chunk dose not have T then the array will be filled with defaultValue;
+
+``` csharp
+public static NativeArray<T> GetOptionalNativeArray<T>(this ref ArchetypeChunk chunk, ComponentTypeHandle<T> typeHandle, int firstEntityIndex, T defaultValue);
+```
+
+## Cheers! Bug report is expected.
