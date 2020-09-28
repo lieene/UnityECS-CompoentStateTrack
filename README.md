@@ -32,7 +32,7 @@ protected override void OnUpdate()
 
 ## Added OptionalComponent API
 
-This it to solve the case when optional data create to many branch in Job or Duplicate Entities.ForEach
+This it to solve the case when optional component requires to make too many branch in Job or Duplicated Entities.ForEach
 Data can be collected ahead, and with default value backup. So ForEach/IJobChunk can run the same routain that allway has this optional Data T.
 
 In OnUpdate of ComponentSystem, the following function will collect ComponentData of Type T, and store them in the returned Array. If T is not found in some of the Entity, defaultValue will be filled;
